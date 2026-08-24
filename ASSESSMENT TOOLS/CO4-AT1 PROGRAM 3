@@ -1,0 +1,223 @@
+import java.applet.Applet;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.*;
+
+public class HospitalEmergencyManagementApplet extends Applet implements ActionListener, ItemListener {
+    TextField patientIdField, patientNameField, ageField;
+    Choice emergencyChoice, doctorChoice, priorityChoice;
+    Checkbox criticalCheck, insuranceCheck;
+    TextArea displayArea;
+    Label alertLabel;
+    Button registerBtn, clearBtn, viewBtn;
+    Vector<String> registeredIds = new Vector<>();
+    Hashtable<String, String> priorityMap = new Hashtable<>();
+
+    public void init() {
+        setLayout(new BorderLayout());
+        MenuBar mb = new MenuBar();
+        Menu regMenu = new Menu("Registration");
+        Menu emeMenu = new Menu("Emergency");
+        Menu repMenu = new Menu("Reports");
+        MenuItem newReg = new MenuItem("New Registration");
+        MenuItem dupCheck = new MenuItem("Check Duplicates");
+        MenuItem clearAll = new MenuItem("Clear All");
+        newReg.addActionListener(this);
+        dupCheck.addActionListener(this);
+        clearAll.addActionListener(this);
+        regMenu.add(newReg);
+        regMenu.add(dupCheck);
+        regMenu.add(clearAll);
+        MenuItem cardiac = new MenuItem("Cardiac");
+        MenuItem trauma = new MenuItem("Trauma");
+        MenuItem neuro = new MenuItem("Neuro");
+        cardiac.addActionListener(this);
+        trauma.addActionListener(this);
+        neuro.addActionListener(this);
+        emeMenu.add(cardiac);
+        emeMenu.add(trauma);
+        emeMenu.add(neuro);
+        MenuItem viewAll = new MenuItem("View All Patients");
+        MenuItem criticalList = new MenuItem("Critical Patients");
+        viewAll.addActionListener(this);
+        criticalList.addActionListener(this);
+        repMenu.add(viewAll);
+        repMenu.add(criticalList);
+        mb.add(regMenu);
+        mb.add(emeMenu);
+        mb.add(repMenu);
+
+        priorityMap.put("Cardiac Arrest", "P1-CRITICAL");
+        priorityMap.put("Accident / Trauma", "P1-CRITICAL");
+        priorityMap.put("Stroke / Critical", "P1-CRITICAL");
+        priorityMap.put("Chest Pain", "P1-HIGH");
+        priorityMap.put("Fracture", "P2-HIGH");
+        priorityMap.put("High Fever", "P3-MEDIUM");
+        priorityMap.put("General", "P4-LOW");
+
+        Panel topPanel = new Panel(new GridLayout(5, 2, 5, 5));
+        topPanel.add(new Label("Patient ID*:"));
+        patientIdField = new TextField(15);
+        topPanel.add(patientIdField);
+        topPanel.add(new Label("Patient Name*:"));
+        patientNameField = new TextField(15);
+        topPanel.add(patientNameField);
+        topPanel.add(new Label("Age*:"));
+        ageField = new TextField(15);
+        topPanel.add(ageField);
+        topPanel.add(new Label("Emergency Category*:"));
+        emergencyChoice = new Choice();
+        emergencyChoice.add("General");
+        emergencyChoice.add("Cardiac Arrest");
+        emergencyChoice.add("Accident / Trauma");
+        emergencyChoice.add("Stroke / Critical");
+        emergencyChoice.add("Chest Pain");
+        emergencyChoice.add("Fracture");
+        emergencyChoice.add("High Fever");
+        emergencyChoice.addItemListener(this);
+        topPanel.add(emergencyChoice);
+        topPanel.add(new Label("Doctor:"));
+        doctorChoice = new Choice();
+        doctorChoice.add("Dr. Kumar - Cardiology");
+        doctorChoice.add("Dr. Priya - Emergency");
+        doctorChoice.add("Dr. John - Neuro");
+        doctorChoice.add("Dr. Smith - General");
+        topPanel.add(doctorChoice);
+        add(topPanel, BorderLayout.NORTH);
+
+        Panel midPanel = new Panel(new FlowLayout());
+        midPanel.add(new Label("Priority:"));
+        priorityChoice = new Choice();
+        priorityChoice.add("P4-LOW");
+        priorityChoice.add("P3-MEDIUM");
+        priorityChoice.add("P2-HIGH");
+        priorityChoice.add("P1-HIGH");
+        priorityChoice.add("P1-CRITICAL");
+        midPanel.add(priorityChoice);
+        criticalCheck = new Checkbox("Critical");
+        insuranceCheck = new Checkbox("Insurance");
+        midPanel.add(criticalCheck);
+        midPanel.add(insuranceCheck);
+        alertLabel = new Label("Ready", Label.CENTER);
+        alertLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        alertLabel.setForeground(Color.BLUE);
+        midPanel.add(alertLabel);
+        registerBtn = new Button("Register");
+        clearBtn = new Button("Clear");
+        viewBtn = new Button("View");
+        registerBtn.addActionListener(this);
+        clearBtn.addActionListener(this);
+        viewBtn.addActionListener(this);
+        midPanel.add(registerBtn);
+        midPanel.add(clearBtn);
+        midPanel.add(viewBtn);
+        add(midPanel, BorderLayout.CENTER);
+
+        displayArea = new TextArea(10, 50);
+        displayArea.setEditable(false);
+        add(displayArea, BorderLayout.SOUTH);
+        updatePriority();
+    }
+
+    void updatePriority() {
+        String cat = emergencyChoice.getSelectedItem();
+        String pri = priorityMap.get(cat);
+        if (pri == null) pri = "P4-LOW";
+        priorityChoice.select(pri);
+        if (pri.equals("P1-CRITICAL")) {
+            criticalCheck.setState(true);
+            alertLabel.setText("ALERT: CRITICAL PATIENT!");
+            alertLabel.setForeground(Color.RED);
+        } else {
+            alertLabel.setText("Priority: " + pri);
+            alertLabel.setForeground(Color.BLUE);
+        }
+    }
+
+    public void itemStateChanged(ItemEvent ie) {
+        updatePriority();
+    }
+
+    public void actionPerformed(ActionEvent ae) {
+        String cmd = ae.getActionCommand();
+        if (cmd.equals("Clear") || cmd.equals("Clear All") || cmd.equals("New Registration")) {
+            patientIdField.setText("");
+            patientNameField.setText("");
+            ageField.setText("");
+            criticalCheck.setState(false);
+            insuranceCheck.setState(false);
+            alertLabel.setText("Cleared");
+            if (cmd.equals("Clear All")) {
+                registeredIds.clear();
+                displayArea.setText("");
+            }
+            return;
+        }
+        if (cmd.equals("View") || cmd.equals("View All Patients")) {
+            if (displayArea.getText().length() == 0) {
+                displayArea.setText("No patients registered");
+            }
+            return;
+        }
+        if (cmd.equals("Critical Patients")) {
+            displayArea.append("\n--- Critical List ---\n");
+            return;
+        }
+        if (cmd.equals("Check Duplicates")) {
+            String id = patientIdField.getText().trim();
+            if (registeredIds.contains(id)) {
+                alertLabel.setText("Duplicate ID Found!");
+            } else {
+                alertLabel.setText("No Duplicate");
+            }
+            return;
+        }
+        if (cmd.equals("Cardiac")) {
+            emergencyChoice.select("Cardiac Arrest");
+            updatePriority();
+            return;
+        }
+        if (cmd.equals("Trauma")) {
+            emergencyChoice.select("Accident / Trauma");
+            updatePriority();
+            return;
+        }
+        if (cmd.equals("Neuro")) {
+            emergencyChoice.select("Stroke / Critical");
+            updatePriority();
+            return;
+        }
+        if (cmd.equals("Register")) {
+            String id = patientIdField.getText().trim();
+            String name = patientNameField.getText().trim();
+            String age = ageField.getText().trim();
+            if (id.length() == 0 || name.length() == 0 || age.length() == 0) {
+                alertLabel.setText("Error: All fields required!");
+                return;
+            }
+            if (registeredIds.contains(id)) {
+                alertLabel.setText("Error: Duplicate Patient ID!");
+                return;
+            }
+            try {
+                int a = Integer.parseInt(age);
+                if (a <= 0) throw new NumberFormatException();
+            } catch (NumberFormatException e) {
+                alertLabel.setText("Error: Invalid Age!");
+                return;
+            }
+            registeredIds.add(id);
+            String record = "ID:" + id + " | Name:" + name + " | Age:" + age + " | Cat:" + emergencyChoice.getSelectedItem() + " | Pri:" + priorityChoice.getSelectedItem() + " | Dr:" + doctorChoice.getSelectedItem() + "\n";
+            displayArea.append(record);
+            if (priorityChoice.getSelectedItem().equals("P1-CRITICAL")) {
+                alertLabel.setText("REGISTERED - CRITICAL ALERT!");
+                alertLabel.setForeground(Color.RED);
+            } else {
+                alertLabel.setText("Registered Successfully");
+            }
+            patientIdField.setText("");
+            patientNameField.setText("");
+            ageField.setText("");
+        }
+    }
+}
