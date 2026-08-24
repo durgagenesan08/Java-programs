@@ -1,0 +1,168 @@
+import java.applet.Applet;
+import java.awt.*;
+import java.awt.event.*;
+
+public class BankingTransactionManagementApplet extends Applet implements ActionListener, ItemListener {
+    double balance = 10000.0;
+    Choice transactionChoice;
+    TextField amountField, accountField;
+    Label balanceLabel, statusLabel;
+    Button executeBtn, clearBtn;
+    TextArea historyArea;
+
+    public void init() {
+        setLayout(new BorderLayout());
+        
+        MenuBar mb = new MenuBar();
+        Menu transMenu = new Menu("Transactions");
+        Menu accMenu = new Menu("Account");
+        MenuItem depItem = new MenuItem("Deposit");
+        MenuItem withItem = new MenuItem("Withdrawal");
+        MenuItem transferItem = new MenuItem("Fund Transfer");
+        MenuItem balItem = new MenuItem("Balance Inquiry");
+        depItem.addActionListener(this);
+        withItem.addActionListener(this);
+        transferItem.addActionListener(this);
+        balItem.addActionListener(this);
+        transMenu.add(depItem);
+        transMenu.add(withItem);
+        transMenu.add(transferItem);
+        transMenu.add(balItem);
+        MenuItem historyItem = new MenuItem("Transaction History");
+        MenuItem clearHistory = new MenuItem("Clear History");
+        historyItem.addActionListener(this);
+        clearHistory.addActionListener(this);
+        accMenu.add(historyItem);
+        accMenu.add(clearHistory);
+        mb.add(transMenu);
+        mb.add(accMenu);
+
+        Panel topPanel = new Panel(new FlowLayout(FlowLayout.CENTER));
+        topPanel.add(new Label("Transaction Type:"));
+        transactionChoice = new Choice();
+        transactionChoice.add("Deposit");
+        transactionChoice.add("Withdrawal");
+        transactionChoice.add("Fund Transfer");
+        transactionChoice.add("Balance Inquiry");
+        transactionChoice.addItemListener(this);
+        topPanel.add(transactionChoice);
+        balanceLabel = new Label("Balance: Rs. " + balance, Label.CENTER);
+        balanceLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        topPanel.add(balanceLabel);
+        add(topPanel, BorderLayout.NORTH);
+
+        Panel centerPanel = new Panel(new GridLayout(4, 2, 10, 10));
+        centerPanel.add(new Label("Amount:"));
+        amountField = new TextField(15);
+        centerPanel.add(amountField);
+        centerPanel.add(new Label("To Account (for Transfer):"));
+        accountField = new TextField(15);
+        centerPanel.add(accountField);
+        centerPanel.add(new Label("Status:"));
+        statusLabel = new Label("Ready", Label.LEFT);
+        centerPanel.add(statusLabel);
+        centerPanel.add(new Label(""));
+        Panel btnPanel = new Panel(new FlowLayout());
+        executeBtn = new Button("Execute");
+        clearBtn = new Button("Clear");
+        executeBtn.addActionListener(this);
+        clearBtn.addActionListener(this);
+        btnPanel.add(executeBtn);
+        btnPanel.add(clearBtn);
+        centerPanel.add(btnPanel);
+        add(centerPanel, BorderLayout.CENTER);
+
+        historyArea = new TextArea(8, 40);
+        historyArea.setEditable(false);
+        add(historyArea, BorderLayout.SOUTH);
+    }
+
+    public void actionPerformed(ActionEvent ae) {
+        String cmd = ae.getActionCommand();
+        if (cmd.equals("Clear")) {
+            amountField.setText("");
+            accountField.setText("");
+            statusLabel.setText("Cleared");
+            return;
+        }
+        if (cmd.equals("Clear History")) {
+            historyArea.setText("");
+            statusLabel.setText("History Cleared");
+            return;
+        }
+        if (cmd.equals("Transaction History")) {
+            statusLabel.setText("Showing History");
+            return;
+        }
+        if (cmd.equals("Deposit") || cmd.equals("Withdrawal") || cmd.equals("Fund Transfer") || cmd.equals("Balance Inquiry")) {
+            transactionChoice.select(cmd);
+            handleTransaction(cmd);
+            return;
+        }
+        if (cmd.equals("Execute")) {
+            String type = transactionChoice.getSelectedItem();
+            handleTransaction(type);
+        }
+    }
+
+    public void itemStateChanged(ItemEvent ie) {
+        statusLabel.setText(transactionChoice.getSelectedItem() + " selected");
+    }
+
+    void handleTransaction(String type) {
+        if (type.equals("Balance Inquiry")) {
+            statusLabel.setText("Balance: Rs. " + balance);
+            historyArea.append("Balance Inquiry: Rs. " + balance + "\n");
+            balanceLabel.setText("Balance: Rs. " + balance);
+            return;
+        }
+
+        String amtText = amountField.getText().trim();
+        if (amtText.length() == 0) {
+            statusLabel.setText("Error: Incomplete input");
+            return;
+        }
+
+        double amount;
+        try {
+            amount = Double.parseDouble(amtText);
+        } catch (NumberFormatException e) {
+            statusLabel.setText("Error: Invalid amount");
+            return;
+        }
+
+        if (amount <= 0) {
+            statusLabel.setText("Error: Invalid amount");
+            return;
+        }
+
+        if (type.equals("Deposit")) {
+            balance += amount;
+            statusLabel.setText("Deposited Rs. " + amount);
+            historyArea.append("Deposited: Rs. " + amount + " | Balance: Rs. " + balance + "\n");
+        } else if (type.equals("Withdrawal")) {
+            if (amount > balance) {
+                statusLabel.setText("Error: Insufficient balance");
+                return;
+            }
+            balance -= amount;
+            statusLabel.setText("Withdrawn Rs. " + amount);
+            historyArea.append("Withdrawn: Rs. " + amount + " | Balance: Rs. " + balance + "\n");
+        } else if (type.equals("Fund Transfer")) {
+            String acc = accountField.getText().trim();
+            if (acc.length() == 0) {
+                statusLabel.setText("Error: Incomplete input - Account needed");
+                return;
+            }
+            if (amount > balance) {
+                statusLabel.setText("Error: Insufficient balance");
+                return;
+            }
+            balance -= amount;
+            statusLabel.setText("Transferred Rs. " + amount + " to " + acc);
+            historyArea.append("Transferred: Rs. " + amount + " to " + acc + " | Balance: Rs. " + balance + "\n");
+        }
+        balanceLabel.setText("Balance: Rs. " + balance);
+        amountField.setText("");
+    }
+}
