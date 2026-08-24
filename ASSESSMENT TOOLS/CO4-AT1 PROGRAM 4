@@ -1,0 +1,262 @@
+import java.applet.Applet;
+import java.awt.*;
+import java.awt.event.*;
+
+public class SmartFactoryMonitoringAndAlertApplet extends Applet implements ActionListener, ItemListener, AdjustmentListener {
+    CardLayout cardLayout;
+    Panel cardPanel;
+    Choice modeChoice, machineChoice;
+    Scrollbar tempBar, pressureBar, productionBar;
+    Label tempLabel, pressureLabel, productionLabel, machineStatusLabel, alertLabel;
+    Button startBtn, stopBtn, emergencyBtn, resetBtn;
+    TextArea logArea;
+    CheckboxGroup statusGroup;
+    Checkbox normalCheck, warningCheck, emergencyCheck;
+    boolean isRunning = false;
+
+    public void init() {
+        setLayout(new BorderLayout());
+        MenuBar mb = new MenuBar();
+        Menu viewMenu = new Menu("View");
+        Menu controlMenu = new Menu("Control");
+        Menu alertMenu = new Menu("Alerts");
+        MenuItem tempView = new MenuItem("Temperature View");
+        MenuItem pressureView = new MenuItem("Pressure View");
+        MenuItem machineView = new MenuItem("Machine Status View");
+        MenuItem productionView = new MenuItem("Production View");
+        tempView.addActionListener(this);
+        pressureView.addActionListener(this);
+        machineView.addActionListener(this);
+        productionView.addActionListener(this);
+        viewMenu.add(tempView);
+        viewMenu.add(pressureView);
+        viewMenu.add(machineView);
+        viewMenu.add(productionView);
+        MenuItem startM = new MenuItem("Start Machine");
+        MenuItem stopM = new MenuItem("Stop Machine");
+        MenuItem emergencyM = new MenuItem("Emergency Stop");
+        startM.addActionListener(this);
+        stopM.addActionListener(this);
+        emergencyM.addActionListener(this);
+        controlMenu.add(startM);
+        controlMenu.add(stopM);
+        controlMenu.add(emergencyM);
+        MenuItem normalA = new MenuItem("Normal Mode");
+        MenuItem warningA = new MenuItem("Warning Mode");
+        MenuItem emergencyA = new MenuItem("Emergency Mode");
+        normalA.addActionListener(this);
+        warningA.addActionListener(this);
+        emergencyA.addActionListener(this);
+        alertMenu.add(normalA);
+        alertMenu.add(warningA);
+        alertMenu.add(emergencyA);
+        mb.add(viewMenu);
+        mb.add(controlMenu);
+        mb.add(alertMenu);
+
+        Panel topPanel = new Panel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        topPanel.add(new Label("Mode:"));
+        modeChoice = new Choice();
+        modeChoice.add("Normal");
+        modeChoice.add("Warning");
+        modeChoice.add("Emergency");
+        modeChoice.addItemListener(this);
+        topPanel.add(modeChoice);
+        topPanel.add(new Label("Machine:"));
+        machineChoice = new Choice();
+        machineChoice.add("Machine-1");
+        machineChoice.add("Machine-2");
+        machineChoice.add("Machine-3");
+        machineChoice.addItemListener(this);
+        topPanel.add(machineChoice);
+        statusGroup = new CheckboxGroup();
+        normalCheck = new Checkbox("Normal", statusGroup, true);
+        warningCheck = new Checkbox("Warning", statusGroup, false);
+        emergencyCheck = new Checkbox("Emergency", statusGroup, false);
+        topPanel.add(normalCheck);
+        topPanel.add(warningCheck);
+        topPanel.add(emergencyCheck);
+        add(topPanel, BorderLayout.NORTH);
+
+        cardLayout = new CardLayout();
+        cardPanel = new Panel(cardLayout);
+
+        Panel tPanel = new Panel(new GridLayout(2, 1));
+        tempLabel = new Label("Temperature: 50", Label.CENTER);
+        tempBar = new Scrollbar(Scrollbar.HORIZONTAL, 50, 5, 0, 100);
+        tempBar.addAdjustmentListener(this);
+        tPanel.add(tempLabel);
+        tPanel.add(tempBar);
+
+        Panel pPanel = new Panel(new GridLayout(2, 1));
+        pressureLabel = new Label("Pressure: 50", Label.CENTER);
+        pressureBar = new Scrollbar(Scrollbar.HORIZONTAL, 50, 5, 0, 100);
+        pressureBar.addAdjustmentListener(this);
+        pPanel.add(pressureLabel);
+        pPanel.add(pressureBar);
+
+        Panel mPanel = new Panel(new GridLayout(2, 1));
+        machineStatusLabel = new Label("Machine Status: STOPPED", Label.CENTER);
+        machineStatusLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        mPanel.add(machineStatusLabel);
+        Panel btnPanel = new Panel(new FlowLayout());
+        startBtn = new Button("Start");
+        stopBtn = new Button("Stop");
+        emergencyBtn = new Button("Emergency Stop");
+        resetBtn = new Button("Reset");
+        startBtn.addActionListener(this);
+        stopBtn.addActionListener(this);
+        emergencyBtn.addActionListener(this);
+        resetBtn.addActionListener(this);
+        btnPanel.add(startBtn);
+        btnPanel.add(stopBtn);
+        btnPanel.add(emergencyBtn);
+        btnPanel.add(resetBtn);
+        mPanel.add(btnPanel);
+
+        Panel prodPanel = new Panel(new GridLayout(2, 1));
+        productionLabel = new Label("Production Level: 50", Label.CENTER);
+        productionBar = new Scrollbar(Scrollbar.HORIZONTAL, 50, 5, 0, 100);
+        productionBar.addAdjustmentListener(this);
+        prodPanel.add(productionLabel);
+        prodPanel.add(productionBar);
+
+        cardPanel.add(tPanel, "Temperature View");
+        cardPanel.add(pPanel, "Pressure View");
+        cardPanel.add(mPanel, "Machine Status View");
+        cardPanel.add(prodPanel, "Production View");
+        add(cardPanel, BorderLayout.CENTER);
+
+        Panel bottomPanel = new Panel(new BorderLayout());
+        alertLabel = new Label("Status: Normal", Label.CENTER);
+        alertLabel.setForeground(Color.GREEN);
+        bottomPanel.add(alertLabel, BorderLayout.NORTH);
+        logArea = new TextArea(6, 50);
+        logArea.setEditable(false);
+        bottomPanel.add(logArea, BorderLayout.CENTER);
+        add(bottomPanel, BorderLayout.SOUTH);
+        updateControls();
+    }
+
+    void updateControls() {
+        String mode = modeChoice.getSelectedItem();
+        if (mode.equals("Emergency")) {
+            emergencyCheck.setState(true);
+            alertLabel.setText("ALERT: EMERGENCY MODE!");
+            alertLabel.setForeground(Color.RED);
+            startBtn.setEnabled(false);
+            isRunning = false;
+            machineStatusLabel.setText("Machine Status: EMERGENCY STOPPED");
+            logArea.append("EMERGENCY ACTIVATED\n");
+        } else if (mode.equals("Warning")) {
+            warningCheck.setState(true);
+            alertLabel.setText("Warning: High Values!");
+            alertLabel.setForeground(Color.ORANGE);
+            startBtn.setEnabled(true);
+        } else {
+            normalCheck.setState(true);
+            alertLabel.setText("Status: Normal");
+            alertLabel.setForeground(Color.GREEN);
+            startBtn.setEnabled(!isRunning);
+        }
+        stopBtn.setEnabled(isRunning);
+    }
+
+    public void adjustmentValueChanged(AdjustmentEvent ae) {
+        int temp = tempBar.getValue();
+        int press = pressureBar.getValue();
+        int prod = productionBar.getValue();
+        tempLabel.setText("Temperature: " + temp);
+        pressureLabel.setText("Pressure: " + press);
+        productionLabel.setText("Production Level: " + prod);
+
+        if (temp > 80 || press > 80) {
+            if (!modeChoice.getSelectedItem().equals("Emergency")) {
+                modeChoice.select("Emergency");
+                updateControls();
+            }
+            logArea.append("CRITICAL: Temp=" + temp + " Press=" + press + "\n");
+        } else if (temp > 60 || press > 60) {
+            if (modeChoice.getSelectedItem().equals("Normal")) {
+                modeChoice.select("Warning");
+                updateControls();
+            }
+            logArea.append("WARNING: Temp=" + temp + " Press=" + press + "\n");
+        }
+    }
+
+    public void itemStateChanged(ItemEvent ie) {
+        if (ie.getSource() == modeChoice) {
+            updateControls();
+        }
+        if (ie.getSource() == machineChoice) {
+            machineStatusLabel.setText("Machine Status: " + (isRunning ? "RUNNING" : "STOPPED") + " - " + machineChoice.getSelectedItem());
+            logArea.append("Switched to " + machineChoice.getSelectedItem() + "\n");
+        }
+    }
+
+    public void actionPerformed(ActionEvent ae) {
+        String cmd = ae.getActionCommand();
+        if (cmd.equals("Temperature View") || cmd.equals("Pressure View") || cmd.equals("Machine Status View") || cmd.equals("Production View")) {
+            cardLayout.show(cardPanel, cmd);
+            logArea.append("View: " + cmd + "\n");
+            return;
+        }
+        if (cmd.equals("Normal Mode")) {
+            modeChoice.select("Normal");
+            updateControls();
+            return;
+        }
+        if (cmd.equals("Warning Mode")) {
+            modeChoice.select("Warning");
+            updateControls();
+            return;
+        }
+        if (cmd.equals("Emergency Mode") || cmd.equals("Emergency Stop")) {
+            modeChoice.select("Emergency");
+            updateControls();
+            return;
+        }
+        if (cmd.equals("Start") || cmd.equals("Start Machine")) {
+            if (modeChoice.getSelectedItem().equals("Emergency")) {
+                alertLabel.setText("Error: Cannot start in Emergency!");
+                logArea.append("Blocked Start - Emergency Mode\n");
+                return;
+            }
+            if (isRunning) {
+                alertLabel.setText("Error: Already Running!");
+                return;
+            }
+            isRunning = true;
+            machineStatusLabel.setText("Machine Status: RUNNING - " + machineChoice.getSelectedItem());
+            alertLabel.setText("Machine Started");
+            logArea.append(machineChoice.getSelectedItem() + " Started\n");
+            updateControls();
+            return;
+        }
+        if (cmd.equals("Stop") || cmd.equals("Stop Machine")) {
+            if (!isRunning) {
+                alertLabel.setText("Error: Already Stopped!");
+                return;
+            }
+            isRunning = false;
+            machineStatusLabel.setText("Machine Status: STOPPED");
+            logArea.append("Machine Stopped\n");
+            updateControls();
+            return;
+        }
+        if (cmd.equals("Reset")) {
+            modeChoice.select("Normal");
+            tempBar.setValue(50);
+            pressureBar.setValue(50);
+            productionBar.setValue(50);
+            tempLabel.setText("Temperature: 50");
+            pressureLabel.setText("Pressure: 50");
+            productionLabel.setText("Production Level: 50");
+            isRunning = false;
+            machineStatusLabel.setText("Machine Status: STOPPED");
+            logArea.setText("");
+            updateControls();
+        }
+    }
+}
