@@ -1,0 +1,127 @@
+import java.io.*;
+import java.util.*;
+
+class Main {
+    private static HashMap<Integer, Employee> employeeMap = new HashMap<>();
+    private static final int TABLE_SIZE = 10;
+    private static byte[] fileData = null;
+
+    public static int hashFunction(int id) {
+        return id % TABLE_SIZE;
+    }
+
+    public static void main(String[] args) {
+        loadFromFile();
+        Scanner sc = new Scanner(System.in);
+        if (!sc.hasNext()) {
+            sc.close();
+            return;
+        }
+        String operation = sc.next().toLowerCase();
+        if (operation.equals("add")) {
+            int id = sc.nextInt();
+            String name = sc.next();
+            double salary = sc.nextDouble();
+            addEmployee(id, name, salary);
+        } else if (operation.equals("search")) {
+            int sid = sc.nextInt();
+            searchEmployee(sid);
+        } else if (operation.equals("update")) {
+            int uid = sc.nextInt();
+            String uname = sc.next();
+            double usal = sc.nextDouble();
+            updateEmployee(uid, uname, usal);
+        } else if (operation.equals("delete")) {
+            int did = sc.nextInt();
+            deleteEmployee(did);
+        }
+        sc.close();
+    }
+
+    public static void addEmployee(int id, String name, double salary) {
+        if (employeeMap.containsKey(id)) {
+            System.out.println("Error: Duplicate ID " + id + " already exists!");
+            return;
+        }
+        int hash = hashFunction(id);
+        Employee emp = new Employee(id, name, salary, hash);
+        employeeMap.put(id, emp);
+        saveToFile();
+        System.out.println("Employee added successfully with hash: " + hash);
+    }
+
+    public static void searchEmployee(int id) {
+        Employee emp = employeeMap.get(id);
+        if (emp != null) {
+            System.out.println("Found: " + emp);
+        } else {
+            System.out.println("Error: Employee ID " + id + " not found!");
+        }
+    }
+
+    public static void updateEmployee(int id, String name, double salary) {
+        if (!employeeMap.containsKey(id)) {
+            System.out.println("Error: Cannot update. Employee ID " + id + " not found!");
+            return;
+        }
+        int hash = hashFunction(id);
+        Employee emp = new Employee(id, name, salary, hash);
+        employeeMap.put(id, emp);
+        saveToFile();
+        System.out.println("Employee updated successfully");
+    }
+
+    public static void deleteEmployee(int id) {
+        if (!employeeMap.containsKey(id)) {
+            System.out.println("Error: Cannot delete. Employee ID " + id + " not found!");
+            return;
+        }
+        employeeMap.remove(id);
+        saveToFile();
+        System.out.println("Employee deleted successfully");
+    }
+
+    public static void saveToFile() {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(employeeMap);
+            oos.close();
+            fileData = baos.toByteArray();
+        } catch (IOException e) {
+            System.out.println("Error: Invalid file operation - " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void loadFromFile() {
+        if (fileData == null) return;
+        try {
+            ByteArrayInputStream bais = new ByteArrayInputStream(fileData);
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            employeeMap = (HashMap<Integer, Employee>) ois.readObject();
+            ois.close();
+        } catch (Exception e) {
+            System.out.println("Error: Could not load file");
+        }
+    }
+}
+
+class Employee implements Serializable {
+    private static final long serialVersionUID = 1L;
+    int id;
+    String name;
+    double salary;
+    int hashValue;
+
+    Employee(int id, String name, double salary, int hashValue) {
+        this.id = id;
+        this.name = name;
+        this.salary = salary;
+        this.hashValue = hashValue;
+    }
+
+    public String toString() {
+        return "ID: " + id + ", Name: " + name + ", Salary: " + salary + ", Hash: " + hashValue;
+    }
+}
